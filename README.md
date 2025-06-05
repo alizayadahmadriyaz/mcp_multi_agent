@@ -25,42 +25,39 @@ Built with:
 
 ---
 ## Architecture
+🧠 Multi-Agent Architecture Overview
 
-                   ┌──────────────────────────┐
-                   │Input Interface(streamlit)│
-                   │  (PDF / Email / JSON)    │
-                   └────────────┬─────────────┘
-                                │
-                                ▼
-                   ┌──────────────────────────┐
-                   │  🧠 Classifier Agent      │
-                   │ - Detects format         │
-                   │ - Classifies intent      │
-                   └────────────┬─────────────┘
-                                │
-       ┌────────────────────────┼────────────────────────┐
-       │                        │                        │
-       ▼                        ▼                        ▼
-┌──────────────┐       ┌────────────────┐        ┌────────────────┐
-│    EmailAgent│       │📄 PDFAgent      │        │🔣 JSONAgent     │
-│ - Tone, urgency       │ - Extract fields │        │ - Parse + validate│
-│ - Action routing      │ - Use LLM + fitz │        │ - Escalate or log │
-└──────────────┘       └────────────────┘        └────────────────┘
-       │                        │                        │
-       └────────────┬──────────┴──────────┬──────────────┘
-                    ▼                     ▼
-            ┌────────────────────────────────┐
-            │   🧠 Shared Memory (SQLite)     │
-            │ - Store full context + trace   │
-            │ - Read/write by all agents     │
-            └────────────────────────────────┘
-                                │
-                                ▼
-                   ┌──────────────────────────┐
-                   │ 🔁 Action Dispatcher     │
-                   │ - e.g., POST /crm/escalate │
-                   │                           │
-                   └──────────────────────────┘
+1️⃣ Input Handler (FastAPI Endpoint)
+    → Accepts Email, PDF, or JSON input
+    → Sends to Classifier Agent
+
+2️⃣ Classifier Agent
+    → Detects `format` (email, pdf, json)
+    → Infers `intent` (e.g., RFQ, Complaint, Fraud)
+    → Stores result in Shared Memory
+    → Triggers the relevant downstream Agent
+
+3️⃣ Specialized Agents
+    📩 EmailAgent:
+        - Detects tone, urgency
+        - Escalates high-risk cases to CRM
+    📄 PDFAgent:
+        - Extracts text using PyMuPDF
+        - Uses LLM to interpret document content
+    🔣 JSONAgent:
+        - Parses structured input
+        - Classifies and reacts using LLM
+
+4️⃣ Shared Memory (SQLite)
+    - Central context store using `entry_id`
+    - Stores format, intent, extracted fields, trace, and actions
+    - Accessible by all agents
+
+5️⃣ Action Dispatcher
+    - Handles escalations or follow-up tasks
+    - Examples:
+        • POST /crm/escalate
+
 
 ## Logics
 🧠 Classifier Agent
