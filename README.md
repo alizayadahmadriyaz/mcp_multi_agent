@@ -24,6 +24,83 @@ Built with:
 
 
 ---
+## Architecture
+
+                   ┌──────────────────────────┐
+                   │Input Interface(streamlit)│
+                   │  (PDF / Email / JSON)    │
+                   └────────────┬─────────────┘
+                                │
+                                ▼
+                   ┌──────────────────────────┐
+                   │  🧠 Classifier Agent      │
+                   │ - Detects format         │
+                   │ - Classifies intent      │
+                   └────────────┬─────────────┘
+                                │
+       ┌────────────────────────┼────────────────────────┐
+       │                        │                        │
+       ▼                        ▼                        ▼
+┌──────────────┐       ┌────────────────┐        ┌────────────────┐
+│    EmailAgent│       │📄 PDFAgent      │        │🔣 JSONAgent     │
+│ - Tone, urgency       │ - Extract fields │        │ - Parse + validate│
+│ - Action routing      │ - Use LLM + fitz │        │ - Escalate or log │
+└──────────────┘       └────────────────┘        └────────────────┘
+       │                        │                        │
+       └────────────┬──────────┴──────────┬──────────────┘
+                    ▼                     ▼
+            ┌────────────────────────────────┐
+            │   🧠 Shared Memory (SQLite)     │
+            │ - Store full context + trace   │
+            │ - Read/write by all agents     │
+            └────────────────────────────────┘
+                                │
+                                ▼
+                   ┌──────────────────────────┐
+                   │ 🔁 Action Dispatcher     │
+                   │ - e.g., POST /crm/escalate │
+                   │                           │
+                   └──────────────────────────┘
+
+## Logics
+🧠 Classifier Agent
+Uses LLM prompt to identify:
+
+format: Email, PDF, or JSON
+
+intent: RFQ, Complaint, Fraud, Invoice, Regulation
+
+Stores the result in shared memory
+
+Dynamically triggers the appropriate agent
+
+📩 EmailAgent
+Accepts email text and entry_id
+
+Extracts:
+
+Tone (angry, neutral, etc.)
+
+Urgency (high, medium, low)
+
+If tone is hostile or urgency is high, triggers /crm/escalate
+
+📄 PDFAgent
+Extracts raw text using PyMuPDF (fitz)
+
+Sends extracted content to LLM for interpretation
+
+Extracted fields stored in memory (e.g., company, order number)
+
+🔣 JSONAgent
+Accepts structured JSON (manually or as text)
+
+Parses fields like sender, customer_id, issue
+
+Uses LLM to classify tone, urgency
+
+Triggers risk or CRM action if needed
+
 
 ## 🚀 How to Run
 
